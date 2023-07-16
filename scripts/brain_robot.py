@@ -114,6 +114,7 @@ def auto_robot_v2():
     data_create = []
     data_out = []
     data_frame = None
+    set_angles = []
     SERVER = socket.gethostbyname(socket.gethostname())
     ADDR = (SERVER, PORT)
     print(SERVER)
@@ -124,6 +125,7 @@ def auto_robot_v2():
     frame = cv2.imread("D:/User/firmware/Screen/hinh-anh-mat-cuoi2-1.png")
     df = pd.read_csv("D:/User/Bot_C/Res/scripts/control.csv")
     reconect = True
+    angles_save = None
     while True:
         # _, frame = cam.read()
         if reconect == True:
@@ -137,7 +139,7 @@ def auto_robot_v2():
             if key != -1:
                 if len(boxes_one) != 0 and len(boxes_two) != 0:
                     ag = False
-                print(key)
+                # print(key)
                 # try:
                 if key == ord('m'):
                     ag = True
@@ -151,39 +153,52 @@ def auto_robot_v2():
                     df2.to_csv(
                         "D:/User/Bot_C/Res/scripts/control.csv", index=False)
                 
-                if key == ord('n'):
+                elif key == ord('n'):
                     c.close()
                     # c, addr = server.accept()
                     reconect = True
-                if key == ord('x'):
+                elif key == ord('x'):
                     c.close()
                     break
-                if key == ord('z'):
+                elif key == ord('z'):
                     msg = ''
-                    angles = random.randint(180, size=(4))
+                    angles_base = random.randint(60, 110)
+                    angles_grip = random.randint(10, 20)
+                    angles_show = random.randint(60, 110)
+                    angles_elbo = random.randint(80, 120)
+                    angles = [angles_base, angles_show, angles_elbo, angles_grip]
+                    angles_save = angles
                     for i in angles:
                         msg += '0'*(3-len(str(i))) + str(i)
                     msg+='\n'
                     print(msg)
+                    c.send(msg.encode())
 
-
-                data_out = control_keyboard(c, key)
-                if key == ord('v'):
-                    msg = ''
-                    for i in angles:
+                elif key == ord('v'):
+                    msg = '' 
+                    for i in set_angles:
                         msg += '0'*(3-len(str(i))) + str(i)
-                        msg+='\n'
+                    msg+='\n'
+                    c.send(msg.encode())
+                    # time.sleep(0.15)
+                else:
+                    data_out = control_keyboard(c, key)
+                    angles_save = data_out
                     # print(msg)
                 if len(boxes_one) != 0 and len(boxes_two) != 0 and data_out != None:
-                    print(center_box(boxes_one[0]), center_box(boxes_two[0]), data_out)
+                    set_angles = angles_save
+                    # print(center_box(boxes_one[0]), center_box(boxes_two[0]), data_out)
 
                     data_frame = np.hstack(
-                        [center_box(boxes_one[0]), center_box(boxes_two[0]), data_out])
+                        [center_box(boxes_one[0]), center_box(boxes_two[0]), angles_save])
                 print(data_frame)
                 print(data_create)
-                # print(ag)
+                    # print(ag)
         except:
-            c, addr = server.accept()
+            c.close()
+            # c, addr = server.accept()
+            reconect = True
+            # c, addr = server.accept()
 
 
 def control_robot():

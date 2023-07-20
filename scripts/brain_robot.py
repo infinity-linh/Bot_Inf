@@ -17,10 +17,10 @@ from numpy import random
 
 url1 = 'http://192.168.2.110/cam-lo.jpg'
 url2 = 'http://192.168.2.108/cam-lo.jpg'
-PATH = "D:/User/Bot_C/Res/scripts/model/model.pt"
+PATH = "D:/User/Bot_C/Res/scripts/model/model_1.pt"
 
 detect = Detection()
-model_ctr = ANN()
+model_ctr = ANN(8)
 model_ctr.load_state_dict(torch.load(PATH))
 
 boxes_one = []
@@ -49,11 +49,11 @@ def cam_right(url):
             if imgnp.any():
                 # print(imgnp.shape)
                 image_eye_root = cv2.imdecode(imgnp, 1)
-                image_eye_left = change_brightness(image_eye_root, 1.0, 35)
-                image_eye_left = cv2.rotate(
-                    image_eye_left, cv2.ROTATE_90_CLOCKWISE)
-                image_eye_left = cv2.resize(image_eye_left, (400, 400))
-                boxes, image_eye_left = detect.detector_image(image_eye_left)
+                image_eye_root = change_brightness(image_eye_root, 1.0, 35)
+                image_eye_root = cv2.rotate(
+                    image_eye_root, cv2.ROTATE_90_CLOCKWISE)
+                image_eye_root = cv2.resize(image_eye_root, (400, 400))
+                boxes, image_eye_left = detect.detector_image(image_eye_root)
                 # boxes, img_ori, areas = tracking_sort(image_eye_left)
                 if ag == True:
                     # and len(boxes) != 0:
@@ -85,11 +85,11 @@ def cam_left(url):
             if imgnp.any():
                 image_eye_root = cv2.imdecode(imgnp, 1)
                 # image_eye_right = cv2.flip(image_eye_right, -1)
-                image_eye_right = change_brightness(image_eye_root, 1.0, 35)
-                image_eye_right = cv2.rotate(
-                    image_eye_right, cv2.ROTATE_90_CLOCKWISE)
-                image_eye_right = cv2.resize(image_eye_right, (400, 400))
-                boxes, image_eye_right = detect.detector_image(image_eye_right)
+                image_eye_root = change_brightness(image_eye_root, 1.0, 35)
+                image_eye_root = cv2.rotate(
+                    image_eye_root, cv2.ROTATE_90_CLOCKWISE)
+                image_eye_root = cv2.resize(image_eye_root, (400, 400))
+                boxes, image_eye_right = detect.detector_image(image_eye_root)
                 if ag == True:
                     # and len(boxes) != 0:
                     boxes_two = boxes
@@ -114,6 +114,7 @@ def auto_robot_v2():
     data_create = []
     data_out = []
     data_frame = None
+    auto_run = False
     set_angles = []
     SERVER = socket.gethostbyname(socket.gethostname())
     ADDR = (SERVER, PORT)
@@ -123,11 +124,16 @@ def auto_robot_v2():
     server.listen()
     cv2.namedWindow("EYES: ", cv2.WINDOW_AUTOSIZE)
     frame = cv2.imread("D:/User/firmware/Screen/hinh-anh-mat-cuoi2-1.png")
-    df = pd.read_csv("D:/User/Bot_C/Res/scripts/control.csv")
+    # path_csv = "D:/User/Bot_C/Res/scripts/control.csv"
+    path_csv = "D:/User/Bot_C/Res/scripts/angles.csv"
+
+    df = pd.read_csv(path_csv)
     reconect = True
     angles_save = None
+
     while True:
         # _, frame = cam.read()
+        print(boxes_one, boxes_two)
         if reconect == True:
             c, addr = server.accept()
             reconect = False
@@ -148,32 +154,24 @@ def auto_robot_v2():
                     # print("Choose data")
                     print("Save data")
 
-                    df2 = pd.DataFrame(data_create, columns=['c11', 'c12', 'c21', 'c22', 'q1', 'q2', 'q3', 'q4'])
+                    df2 = pd.DataFrame(data_create, columns=['x1', 'x2', 'x3', 'x4',
+                                                            'y1', 'y2', 'y3', 'y4',
+                                                            'q1', 'q2', 'q3', 'q4'])
+
+                    # df2 = pd.DataFrame(data_create, columns=['c11', 'c12', 'c21', 'c22', 'q1', 'q2', 'q3', 'q4'])
                     df2 = pd.concat([df, df2])
                     df2.to_csv(
-                        "D:/User/Bot_C/Res/scripts/control.csv", index=False)
+                        path_csv, index=False)
                 
                 elif key == ord('n'):
                     c.close()
+                    auto_run = False
                     # c, addr = server.accept()
                     reconect = True
                 elif key == ord('x'):
                     c.close()
                     break
-                elif key == ord('z'):
-                    msg = ''
-                    angles_base = random.randint(60, 110)
-                    angles_grip = random.randint(10, 20)
-                    angles_show = random.randint(60, 110)
-                    angles_elbo = random.randint(80, 120)
-                    angles = [angles_base, angles_show, angles_elbo, angles_grip]
-                    angles_save = angles
-                    for i in angles:
-                        msg += '0'*(3-len(str(i))) + str(i)
-                    msg+='\n'
-                    print(msg)
-                    c.send(msg.encode())
-
+                
                 elif key == ord('v'):
                     msg = '' 
                     for i in set_angles:
@@ -185,20 +183,57 @@ def auto_robot_v2():
                     data_out = control_keyboard(c, key)
                     angles_save = data_out
                     # print(msg)
-                if len(boxes_one) != 0 and len(boxes_two) != 0 and data_out != None:
-                    set_angles = angles_save
-                    # print(center_box(boxes_one[0]), center_box(boxes_two[0]), data_out)
+                if key == ord('z'):
+                    auto_run = True
+                    print("Auto run start!", auto_run)
 
-                    data_frame = np.hstack(
-                        [center_box(boxes_one[0]), center_box(boxes_two[0]), angles_save])
-                print(data_frame)
+
+            if auto_run == True:
+                msg = ''
+                angles_base = random.randint(80, 120)
+                angles_grip = random.randint(20, 25)
+                angles_show = random.randint(50, 80)
+                angles_elbo = random.randint(50, 120)
+                angles = [angles_base, angles_show, angles_elbo, angles_grip]
+                angles_save = angles
+                for i in angles:
+                    msg += '0'*(3-len(str(i))) + str(i)
+                msg+='\n'
+                print(msg)
+                c.send(msg.encode())
+                time.sleep(3)
+
+            if len(boxes_one) != 0 and len(boxes_two) != 0 and angles_save != None and auto_run == True:
+                set_angles = angles_save
+                print(center_box(boxes_one[0]), center_box(boxes_two[0]), angles_save)
+                # print(angles_save)
+                # data_frame = np.hstack(
+                #     [center_box(boxes_one[0]), center_box(boxes_two[0]), angles_save])
+                data_frame = np.hstack([boxes_one[0], boxes_two[0], angles_save])
+                if square_box(boxes_one[0]) < 90000 and square_box(boxes_two[0]) < 90000:
+                    ag = True
+                    data_create.append(data_frame)
+                    data_frame = []
+                    # print("Choose data")
+                    print("Save data")
+
+                    df2 = pd.DataFrame(data_create, columns=['x1', 'x2', 'x3', 'x4',
+                                                            'y1', 'y2', 'y3', 'y4',
+                                                            'q1', 'q2', 'q3', 'q4'])
+
+                    # df2 = pd.DataFrame(data_create, columns=['c11', 'c12', 'c21', 'c22', 'q1', 'q2', 'q3', 'q4'])
+                    df2 = pd.concat([df, df2])
+                    df2.to_csv(
+                        path_csv, index=False)
+            # print(data_frame)
                 print(data_create)
-                    # print(ag)
+                # print(ag)
         except:
             c.close()
             # c, addr = server.accept()
             reconect = True
             # c, addr = server.accept()
+
 
 
 def control_robot():
@@ -227,19 +262,23 @@ def control_robot():
     while True:
         msg = ''
         angles = []
+        flag_move == True
 
         if reconect == True:
             sv, addr = server.accept()
             reconect = False
             print ('Got connection from', addr )
 
-        if len(boxes_one) != 0 and len(boxes_two) != 0 and flag_move==True:
-            boxes = np.array(np.hstack([center_box(boxes_one[0]), center_box(boxes_two[0])]),dtype=np.float32)
-            angles = model_ctr(torch.tensor([boxes], dtype=torch.float32))*180
-            angles = np.array(angles.detach().numpy()[0], dtype=np.int8)
+        if len(boxes_one) != 0 and len(boxes_two) != 0 :
+        # and flag_move==True:
+            # boxes = np.array([np.hstack([center_box(boxes_one[0]), center_box(boxes_two[0])])/400],dtype=np.float32)
+            boxes = np.array(np.hstack([boxes_one[0], boxes_two[0]])/400,dtype=np.float32)
+            
+            angles = model_ctr(torch.tensor(boxes, dtype=torch.float32))*180
+            angles = np.array(angles.detach().numpy(), dtype=np.int8)
             angles_current = angles
             flag_move = False
-            print("Angles: ", angles)
+            # print("Angles: ", angles_current)
         elif (len(boxes_one)!= 0 and len(boxes_two)==0):
             # print(boxes_one[0])
             cx, cy = center_box(boxes_one[0])
@@ -266,12 +305,17 @@ def control_robot():
             time.sleep(0.1)
         elif flag_move == False:
             if idx == 2:
-                angles = angles_current 
+                angles = angles_current
+                angles[3] = 77
+            elif idx == 3:
+                angles = angles_current
+                angles[3] = 10
             else:
                 angles = start[idx]
-            # print(angles_current)
-            print(angles)
-            
+            # angles = angles_current
+            # angles[3] = 77
+
+            print('Angle: ', idx, angles)
             msg = ''
             if angles[0] >= 0 and angles[1] >= 0 and angles[2] >= 0 and angles[3] >= 0:
                 angles = angles
@@ -282,25 +326,25 @@ def control_robot():
             msg+='\n'
             
             # print(idx, len(start)," Box_one: ", boxes_one," Box_two: ", boxes_two, "Angles: ", angles, "Msg: ", msg)
-        print(sv.recv(3))
+        # print(sv.recv(3))
             # sv.send(msg.encode())
         # if sv.recv(3) == b'sta':
-        sv.send(msg.encode())
-        time.sleep(0.15)
-        print('start')
-        if reconect == False and sv.recv(3)==b'end':
+        try:
+            sv.send(msg.encode())
+            time.sleep(1)
+            # print('start')
+            # if reconect == False and sv.recv(3)==b'end':
             idx+=1
-        # except:
-        #     sv.close()
-        #     reconect = True
+        except:
+            sv.close()
+            reconect = True
         if idx >= len(start):
             print(idx, "Stop")
             idx = 0
-            flag_move == True
             reconect = True
             sv.close()
+            time.sleep(3)
             # break
-        
 
 
 if __name__ == '__main__':

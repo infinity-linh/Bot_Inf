@@ -62,7 +62,7 @@ class Detection():
         for *xyxy, conf, cls in reversed(det):
             class_num = int(cls)
             
-            if class_num == 0 and conf >= 0.5:
+            if class_num == 0 and conf >= 0.6:
                 boxes.append(xyxy)
                 label = None if self.hide_labels else (self.class_names[class_num] if self.hide_conf else f'{self.class_names[class_num]} {conf:.2f}')
                 Inferer.plot_box_and_label(img_ori, max(round(sum(img_ori.shape) / 2 * 0.003), 2), xyxy, label, color=Inferer.generate_colors(class_num, True))

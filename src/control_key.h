@@ -1,9 +1,9 @@
 #include <ESP32Servo.h>
 #include <vector>
+#include <EEPROM.h>
+
 const int SERVO_FORWARD_STEP_ANGLE = 1;
 const int SERVO_BACKWARD_STEP_ANGLE = -1;
-bool flag_end = false;
-bool flag_start = true;
 
 struct ServoPins
 {
@@ -23,9 +23,12 @@ std::vector<ServoPins> servoPins =
 void init_control()
 {
     pinMode(2, OUTPUT);
+    EEPROM.begin(4);  
+
     for (int i = 0; i < servoPins.size(); i++)
     {
         servoPins[i].servo.attach(servoPins[i].servoPin);
+        servoPins[i].initialPosition = EEPROM.read(i);
         // servoPins[i].servo.write(servoPins[i].initialPosition);
     }
 }
@@ -115,8 +118,6 @@ bool control_keyboard(char data_control)
 
 void move_point(int start[], int end[])
 {
-    flag_end = false;
-
     for (int i = 0; i < 4; i++)
     {
         int check;
@@ -143,10 +144,11 @@ void move_point(int start[], int end[])
         }
         else
         {
-            servoPins[i].initialPosition = end[i];
-            delay(10);
+            continue;
+            // servoPins[i].initialPosition = end[i];
+            // delay(10);
         }
+        EEPROM.write(i, end[i]);
+        EEPROM.commit();
     }
-    flag_start = true;
-    flag_end = true;
 }

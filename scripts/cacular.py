@@ -91,6 +91,9 @@ def calculator(data_input):
 def center_box(box):
     x, y = box[0]+(box[2] - box[0])//2, box[1]+(box[3] - box[1])//2 
     return x, y
+
+def square_box(box):
+    return (box[2]-box[0]) * (box[3]-box[1])
 # frame = cv2.imread("D:/User/firmware/Screen/hinh-anh-mat-cuoi2-1.png")
 
 # while True:

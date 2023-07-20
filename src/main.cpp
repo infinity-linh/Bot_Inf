@@ -2,7 +2,6 @@
 #include <Arduino.h>
 // #include "control_dc.h"
 #include "control_key.h"
-
 // Replace with your own network credentials
 const char *ssid = "101";
 const char *password = "p1016282";
@@ -44,22 +43,13 @@ void loop()
   // client.print("sta");
   while (client.connected())
   {
-    if (flag_start==true){
-      client.print("sta");
-    }
-    else{
-      client.print("oke");
-    }
     if (client.available())
     {
       String line = client.readStringUntil('\n');
       Serial.println(line);
-      Serial.println(flag_end);
-      Serial.println(flag_start);
 
       if (line.length() < 15 && line.length() > 8)
       {
-        flag_start = false;
         control = false;
         String angle;
         int angles_end[4];
@@ -80,13 +70,9 @@ void loop()
           }
         }
         move_point(angles_start, angles_end);
-        if (flag_end == true){
-          client.print("end");
-        }
       }
       else if (line.length() <= 7 and line.length()>3)
       {
-        flag_start = false;
         control = true;
         char data_control = line[5];
         // Serial.println(data_control);
@@ -94,12 +80,8 @@ void loop()
         {
           Serial.println(line);
           // client.print("end");
-          flag_start==true;
         }
       }
-    }
-    if (control==false){
-      delay(100);
     }
   }
   client.stop();

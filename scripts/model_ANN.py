@@ -2,11 +2,11 @@ import torch.nn as nn
 import tqdm
 import torch
 class ANN(nn.Module):
-    def __init__(self):
+    def __init__(self, input=4):
         super().__init__()
 
         # self.relu1 = nn.ReLU(inplace=True)
-        self.liner1 = nn.Linear(4,128)
+        self.liner1 = nn.Linear(input,128)
         self.relu = nn.ReLU()
         self.liner2 = nn.Linear(128,8)
         self.liner3 = nn.Linear(8,4)

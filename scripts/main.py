@@ -354,3 +354,108 @@ if __name__ == '__main__':
         # funtwo = executer.submit(run_camera_left)
     # auto_robot_v2()
         funfour = executer.submit(run_eyes)
+
+
+
+def control_robot():
+
+    start = [[106, 169, 58, 10],
+             [106, 169, 58, 77],
+             [108, 48, 100, 77],
+             [108, 48, 100, 10],
+             [108, 100, 50, 10],
+             [23, 150, 39, 10],
+             [23, 150, 39, 100],
+             [106, 169, 58, 10]]
+
+    PORT = 8090
+    SERVER = socket.gethostbyname(socket.gethostname())
+    ADDR = (SERVER, PORT)
+    print(SERVER)
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind(ADDR)
+    server.listen()
+    idx = 0
+    reconect = True
+    angles_current = []
+    flag_move = True
+
+    while True:
+        msg = ''
+        angles = []
+        flag_move == True
+
+        if reconect == True:
+            sv, addr = server.accept()
+            reconect = False
+            print ('Got connection from', addr )
+
+        if len(boxes_one) != 0 and len(boxes_two) != 0 :
+        # and flag_move==True:
+            # boxes = np.array([np.hstack([center_box(boxes_one[0]), center_box(boxes_two[0])])/400],dtype=np.float32)
+            boxes = np.array(np.hstack([boxes_one[0], boxes_two[0]])/400,dtype=np.float32)
+            
+            angles = model_ctr(torch.tensor(boxes, dtype=torch.float32))*180
+            angles = np.array(angles.detach().numpy()[0], dtype=np.int8)
+            angles_current = angles
+            flag_move = False
+            print("Angles: ", angles_current)
+        elif (len(boxes_one)!= 0 and len(boxes_two)==0):
+            # print(boxes_one[0])
+            cx, cy = center_box(boxes_one[0])
+            if abs(cx - 200) < 100:
+                msg = "linh"+"_"+"f"+"\n"
+            elif (cx - 200) > 100:
+                msg = "linh"+"_"+"t"+"\n"
+            elif (cx - 200) < -100:
+                msg = "linh"+"_"+"g"+"\n"
+        elif (len(boxes_two)!=0 and len(boxes_one)== 0):
+            # print(boxes_two[0])
+            cx, cy = center_box(boxes_two[0])
+            if abs(cx - 200) < 100:
+                msg = "linh"+"_"+"t"+"\n"
+            elif (cx - 200) > 100:
+                msg = "linh"+"_"+"f"+"\n"
+            elif (cx - 200) < -100:
+                msg = "linh"+"_"+"h"+"\n"
+        else:
+            msg = "linh"+"_"+"o"+"\n"
+
+        if flag_move == True:
+            sv.send(msg.encode())
+            time.sleep(0.1)
+        elif flag_move == False:
+            if idx == 3:
+                angles = angles_current
+                angles[3] = 77
+            else:
+                angles = start[idx]
+            
+            msg = ''
+            if angles[0] >= 0 and angles[1] >= 0 and angles[2] >= 0 and angles[3] >= 0:
+                angles = angles
+            else:
+                angles = start[idx]
+            for i in angles:
+                msg += '0'*(3-len(str(i))) + str(i)
+            msg+='\n'
+            
+            # print(idx, len(start)," Box_one: ", boxes_one," Box_two: ", boxes_two, "Angles: ", angles, "Msg: ", msg)
+        # print(sv.recv(3))
+            # sv.send(msg.encode())
+        # if sv.recv(3) == b'sta':
+        # try:
+        sv.send(msg.encode())
+        time.sleep(3)
+        # print('start')
+        if reconect == False and sv.recv(3)==b'end':
+            idx+=1
+        # except:
+            # sv.close()
+            # reconect = True
+        if idx >= len(start):
+            print(idx, "Stop")
+            idx = 0
+            reconect = True
+            sv.close()
+            # break

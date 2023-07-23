@@ -315,6 +315,8 @@ def control_robot():
                     msg = "linh"+"_"+"t"+"\n"
                 elif (cx - 200) < -100:
                     msg = "linh"+"_"+"g"+"\n"
+                if 90000 > area_two > 30000:
+                    msg = "linh"+"_"+"f"+"\n"
             elif (len(boxes_two) != 0 and len(boxes_one) == 0):
                 # flag_move = True
                 # print(boxes_two[0])
@@ -326,14 +328,21 @@ def control_robot():
                     msg = "linh"+"_"+"h"+"\n"
                 elif (cx - 200) < -100:
                     msg = "linh"+"_"+"f"+"\n"
+                if 90000 > area_two > 30000:
+                    msg = "linh"+"_"+"g"+"\n"
             else:
                 # flag_move = True
-                ctrcnst = ['f','t','g','h','o']
+                ctrcnst = ['f', 't', 'g', 'h', 'o']
                 if count % 3 == 0:
                     ctr = np.random.randint(4)
-                    count=0
-                count+=1
+                    count = 0
+                count += 1
                 msg = "linh"+"_"+ctrcnst[ctr]+"\n"
+            if area_one != 0 and area_two != 0:
+                if area_one < 7000:
+                    msg = "linh"+"_"+"h"+"\n"
+                elif area_two < 7000:
+                    msg = "linh"+"_"+"t"+"\n"
 
             print(flag_move, msg)
             if flag_move == True:
@@ -364,9 +373,6 @@ def control_robot():
                     angles[3] = 20
                 else:
                     angles = start[idx]
-                # angles = angles_current
-                # angles[2] -= 2
-                # angles[3] = 77
 
                 print('Angle: ', idx, angles)
                 msg = ''

@@ -26,6 +26,7 @@ class Net(nn.Module):
         self.drop = nn.Dropout2d(0.25)
         self.fc2 = nn.Linear(in_features=512, out_features=128)
         self.fc3 = nn.Linear(in_features=128, out_features=4)
+        self.out = nn.Sigmoid()
         
     def forward(self, x, y):
         out1 = self.layer1(x)

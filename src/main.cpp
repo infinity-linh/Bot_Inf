@@ -58,7 +58,7 @@ void brain_robot()
     {
       String line = client.readStringUntil('\n');
 
-      if (line.length() < 15 && line.length() > 8)
+      if (line.length() < 15 && line.length() > 10)
       {
         Serial.println(line);
 
@@ -84,11 +84,11 @@ void brain_robot()
       }
 
 
-      else if (line.length() < 8 and line.length() > 3)
+      else if (line.length() < 11 and line.length() > 3)
       {
         String speed;
-        int speed_end[2];
-        char direct = line[6];
+        int speed_end[8];
+        char direct = line[9];
         for (int i = 0; i < line.length(); i++)
         {
           speed += line[i];
@@ -101,10 +101,10 @@ void brain_robot()
         }
         Serial.println(direct);
         control_robot(direct);
-        set_speed(speed_end[0], speed_end[0]-18);//18, 30
-        delay(speed_end[1]);
-        control_robot('o');
-        // set_speed(0, 0);
+        set_speed(speed_end[0], speed_end[1]);//18, 30
+        delay(speed_end[2]);
+        set_speed(0, 0);//18, 30
+
         delay(10);
 
       }

@@ -13,19 +13,29 @@ import pandas as pd
 from model_ANN import ANN
 import torch
 from numpy import random
+from model_CNN import Net
 
-url1 = 'http://192.168.2.110/cam-lo.jpg'
-url2 = 'http://192.168.2.108/cam-lo.jpg'
+
+url1 = 'http://192.168.2.103/cam-lo.jpg'
+url2 = 'http://192.168.2.102/cam-lo.jpg'
 # url1 = 'http://192.168.1.11/cam-lo.jpg'
 # url2 = 'http://192.168.1.9/cam-lo.jpg'
 
 
 
 PATH = "D:/User/Bot_C/Res/scripts/model/model_auto.pt"
+PATH_m = 'D:/User/DLBot/scripts/model/move_model_new_4.pt'
+
+if torch.cuda.is_available():
+    device = "cuda:0"
+else:
+    device = "cpu"
 
 detect = Detection()
 model_ctr = ANN(8)
 model_ctr.load_state_dict(torch.load(PATH))
+net = Net()
+net.load_state_dict(torch.load(PATH_m, map_location=torch.device(device)))
 
 boxes_one = []
 boxes_two = []
@@ -42,6 +52,7 @@ def change_brightness(img, alpha, beta):
     img_new[img_new < 0] = 0
     return np.array(img_new, dtype=np.uint8)
 
+
 def eyes(url1, url2):
     global boxes_two
     global boxes_one
@@ -51,14 +62,15 @@ def eyes(url1, url2):
 
     # global check_cam_right
     print("Camera ready!")
+    count = 0
     while True:
         if check_cam == False:
             cv2.namedWindow('Camera l:', cv2.WINDOW_NORMAL)
             cv2.namedWindow('Camera r:', cv2.WINDOW_NORMAL)
 
         try:
-            img_resp1 = urllib.request.urlopen(url1, timeout=1)
-            img_resp2 = urllib.request.urlopen(url2, timeout=1)
+            img_resp1 = urllib.request.urlopen(url1, timeout=2)
+            img_resp2 = urllib.request.urlopen(url2, timeout=2)
 
             imgnp1 = np.array(bytearray(img_resp1.read()), dtype=np.uint8)
             imgnp2 = np.array(bytearray(img_resp2.read()), dtype=np.uint8)
@@ -92,7 +104,13 @@ def eyes(url1, url2):
             cv2.imshow("Camera r:", image_eye_right)
 
 
-            cv2.waitKey(1)
+            key = cv2.waitKey(1)
+            if key == 32:
+                cv2.imwrite('D:/User/data_object/images/imagel_{}.png'.format(count), image_eye_rootl)
+                cv2.imwrite('D:/User/data_object/images/imager_{}.png'.format(count), image_eye_rootr)
+                count+=1
+
+
         except:
             # cv2.destroyAllWindows()
             cv2.destroyWindow('Camera l:')
@@ -138,10 +156,10 @@ def auto_robot_v2():
 
                 if auto_run == True:
                     msg = ''
-                    angles_base = random.randint(80, 110)
-                    angles_show = random.randint(35, 60)
-                    angles_elbo = random.randint(50, 100)
-                    angles_grip = random.randint(10, 15)
+                    angles_base = random.randint(80, 120)
+                    angles_show = random.randint(20, 60)
+                    angles_elbo = random.randint(50, 80)
+                    angles_grip = random.randint(15, 20)
 
                     angles = [angles_base, angles_show, angles_elbo, angles_grip]
                     angles_save = angles
@@ -196,14 +214,14 @@ def create_data():
     server.listen()
     reconect = True
     path_csv = "D:/User/DLBot/scripts/data/locals.csv"
-
-    path_save_l = "D:/User/data_map/left/"
-    path_save_r = "D:/User/data_map/right/"
+    direct = [104,103,102,116]
+    path_save_l = "D:/User/data_map_1/left/"
+    path_save_r = "D:/User/data_map_1/right/"
     idx_name = len(os.listdir(path_save_l))
     print(idx_name)
     # cv2.namedWindow("Eye:", cv2.WINDOW_NORMAL)
-
-
+    numofimage = 0
+    auto = False
     while True:
         if reconect == True:
             frame = cv2.imread("D:/User/firmware/Screen/hinh-anh-mat-cuoi2-1.png")
@@ -216,16 +234,23 @@ def create_data():
             cv2.imshow("Eye:", frame)
             key = cv2.waitKey(1)
 
-            try:
-                if key != -1:
+            # try:
+            if key != -1:
+                if key == 32:
+                    auto = ~auto
+                    print("Auto: ", auto)
+                # if auto!=True:f
+                else:
+                # if key!=32:
+
                     data_frame = []
                     df = pd.read_csv(path_csv)
+
                     name_l = "imagel_{}.png".format(idx_name)
                     name_r = "imager_{}.png".format(idx_name)
-                    cv2.imwrite(path_save_l+name_l, image_eye_rootl)
-                    cv2.imwrite(path_save_r+name_r, image_eye_rootr)
-                    data_out, _ = control_v(sv, key)
-                    # data_pre = data_out
+                    data_out, send_msg, _ = control_v(sv, key)
+                        
+                    # data_pre = data_outtf
                     # if data_out != 't':
                     data_frame.append(name_l)
                     data_frame.append(name_r)
@@ -233,14 +258,47 @@ def create_data():
                     df2 = pd.DataFrame([data_frame], columns=[
                                     'imagel', 'imager', 'action'])
                     df2 = pd.concat([df, df2])
+                    # if numofimage > 99:
+                    #     sv.close()
+                    #     break
+                    # if data_out == 'h' or data_out == 'f' or data_out == 'g':
+                    cv2.imwrite(path_save_l+name_l, image_eye_rootl)
+                    cv2.imwrite(path_save_r+name_r, image_eye_rootr)
                     df2.to_csv(
                         path_csv, index=False)
-                    print(data_frame)
+                    numofimage+=1
+                    print("Number of {}: {}".format(data_out, numofimage))
+
+                    # print(data_frame)
                     idx_name += 1
                     # time.sleep(2)
-            except:
-                sv.close()
-                reconect = True
+                    try:
+                        print(send_msg)
+                        sv.send(send_msg.encode())
+                    except:
+                        sv.close()
+                        reconect = True
+            if auto == -1: 
+                if len(image_eye_rootl)!=0 and len(image_eye_rootr) != 0:
+                    image1 = cv2.resize(image_eye_rootl, [256,256]).transpose([2,0,1])
+                    image2 = cv2.resize(image_eye_rootr, [256,256]).transpose([2,0,1])
+                    image1, image2 = torch.tensor([image1],dtype=torch.float32), torch.tensor([image2],dtype=torch.float32)
+                    outputs = net(image1, image2)
+                    _, predicted = torch.max(outputs, 1)
+                    sig = np.array(predicted, dtype=np.uint8)[0]
+                    print(direct[sig])
+                    dta, send_msg, _ = control_v(sv, direct[sig])
+                    print("Direct: ",dta)
+                try:
+                    print(send_msg)
+                    sv.send(send_msg.encode())
+                    time.sleep(1)
+                except:
+                    sv.close()
+                    reconect = True
+            # except:
+            #     sv.close()
+            #     reconect = True
         else:
             sv.close()
             cv2.destroyWindow("Eye:")
@@ -251,26 +309,27 @@ def colection_data():
     path_save_l = "D:/User/data_object/images/"
     idx_name = len(os.listdir(path_save_l))
     while True:
-        try:
-            name_l = "imagel_{}.png".format(idx_name)
-            print(name_l)
-            cv2.imwrite(path_save_l+name_l, image_eye_rootl)
-            idx_name+=1
-            time.sleep(3)
-        except:
-            pass
+        if check_cam == True:
+            try:
+                name_l = "imagel_{}.png".format(idx_name)
+                print(name_l)
+                cv2.imwrite(path_save_l+name_l, image_eye_rootl)
+                idx_name+=1
+                time.sleep(3)
+            except:
+                pass
 
 if __name__ == '__main__':
     print("Started")
 
     # t = time.time()
     t1 = threading.Thread(target=eyes, args=(url1, url2,))
-    # t2 = threading.Thread(target=create_data)
-    t3 = threading.Thread(target=auto_robot_v2)
+    t2 = threading.Thread(target=create_data)
+    # t3 = threading.Thread(target=auto_robot_v2)
     # t3 = threading.Thread(target=colection_data)
 
 
     t1.start()
-    # t2.start()
-    t3.start()
+    t2.start()
+    # t3.start()
 

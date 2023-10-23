@@ -26,7 +26,9 @@ class Detection():
         cuda = self.device != 'cpu' and torch.cuda.is_available()
         self.device = torch.device('cuda:0' if cuda else 'cpu')
 
-        self.model = DetectBackend(f"D:/User/DLBot/scripts/model/model_control.pt", device=self.device)
+        # self.model = DetectBackend(f"D:/User/DLBot/scripts/model/model_control.pt", device=self.device)
+        self.model = DetectBackend(f"D:/User/DLBot/scripts/model/best_stop_aug_ckpt.pt", device=self.device)
+
         self.stride = self.model.stride
         self.class_names = load_yaml("D:/User/DLBot/scripts/data/coco.yaml")['names']
 

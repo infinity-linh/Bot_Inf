@@ -20,12 +20,12 @@ server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind(ADDR)
 server.listen()
 
-url1 = 'http://192.168.2.110/cam-lo.jpg'
-url2 = 'http://192.168.2.108/cam-lo.jpg'
+url1 = 'http://192.168.2.103/cam-lo.jpg'
+url2 = 'http://192.168.2.102/cam-lo.jpg'
 # url1 = 'http://192.168.1.11/cam-lo.jpg'
 # url2 = 'http://192.168.1.9/cam-lo.jpg'
 PATH = "D:/User/DLBot/scripts/model/model_auto.pt"
-PATH_m = 'D:/User/DLBot/scripts/model/move_model_new_1.pt'
+PATH_m = 'D:/User/DLBot/scripts/model/move_model_new_3.pt'
 
 if torch.cuda.is_available():
     device = "cuda:0"
@@ -65,8 +65,8 @@ def eyes(url1, url2):
     print("Camera ready!")
     while True:
         try:
-            img_resp1 = urllib.request.urlopen(url1, timeout=1)
-            img_resp2 = urllib.request.urlopen(url2, timeout=1)
+            img_resp1 = urllib.request.urlopen(url1, timeout=2)
+            img_resp2 = urllib.request.urlopen(url2, timeout=2)
 
             imgnp1 = np.array(bytearray(img_resp1.read()), dtype=np.uint8)
             imgnp2 = np.array(bytearray(img_resp2.read()), dtype=np.uint8)
@@ -107,18 +107,20 @@ def eyes(url1, url2):
 
 
 def control_robot():
-
-    start = [[106, 170, 80, 5],
-             [106, 170, 80, 90],
-             [106, 48, 100, 90],
-             [106, 48, 100, 5],
-             [106, 120, 80, 5],
-             [10, 150, 80, 5],
-             [10, 150, 80, 100],
-             [106, 170, 80, 5]]
+    bias = [40, -5, -5]
+    start = [[120, 150, 30, 5],
+             [120, 150, 30, 90],
+             [120, 150, 30, 90],
+             [120, 150, 30, 90],
+             [120, 100, 10, 5],
+             [15, 125, 10, 5],
+             [15, 125, 10, 90],
+             [120, 150, 30, 5]]
+            #  [106, 150, 30, 50],
+            #  [106, 150, 30, 5]]
     global state_move
 
-    idx = 0
+    idx_move = 0
     reconect = True
     angles_current = []
     flag_move = True
@@ -126,6 +128,7 @@ def control_robot():
     catch_com = False
     direct = [104,103,102,116]
     idx = 0
+    print(len(start))
     while True:
         angles = []
  
@@ -136,15 +139,15 @@ def control_robot():
             sv, addr = server.accept()
             reconect = False
             print('Got connection from', addr)
-            msg = "255100"+"o"+"\n"
+            msg = "255255100"+"o"+"\n"
             sv.send(msg.encode())
             time.sleep(1)
 
         if check_cam == True:
             # print(boxes_one, boxes_two)
             
-            msg, flag_move, state_stop, catch_com, angles_current, state_move, idx = state_robot(
-                boxes_one, boxes_two, model_ctr, flag_move, state_stop, catch_com, angles_current, state_move, idx)
+            msg, flag_move, state_stop, catch_com, angles_current, state_move, idx_move = state_robot(
+                boxes_one, boxes_two, model_ctr, flag_move, state_stop, catch_com, angles_current, state_move, idx_move)
             # print("msg :", msgs)
             # if len(boxes_one) == 0 and len(boxes_two) == 0:
             #     state_move = True
@@ -152,16 +155,16 @@ def control_robot():
             #     state_move = False
             if state_move != False:
                 if len(image_eye_rootl)!=0 and len(image_eye_rootr) != 0:
-                    image1 = cv2.resize(image_eye_rootl, [256,256]).transpose([2,0,1])/256
-                    image2 = cv2.resize(image_eye_rootr, [256,256]).transpose([2,0,1])/256
-                    image1, image2 = torch.tensor([image1],dtype=torch.float32), torch.tensor([image2],dtype=torch.float32)
+                    image1 = cv2.resize(image_eye_rootl, [256,256]).transpose([2,0,1])
+                    image2 = cv2.resize(image_eye_rootr, [256,256]).transpose([2,0,1])
+                    image1, image2 = torch.tensor(np.array([image1]),dtype=torch.float32), torch.tensor(np.array([image2]),dtype=torch.float32)
                     outputs = net(image1, image2)
                     _, predicted = torch.max(outputs, 1)
                     sig = np.array(predicted, dtype=np.uint8)[0]
-                    print(direct[sig])
+                    # print(direct[sig])
                 try:
-                    dta, msg = control_v(sv, direct[sig])
-                    print("Direct: ",dta)
+                    dta, msg, tim = control_v(sv, direct[sig])
+                    # print("Direct: ",dta)
                     # send_msg = "255400"+str(direct[sig])+"\n"
                     # sv.send(send_msg.encode())
                     # time.sleep(1)
@@ -181,7 +184,7 @@ def control_robot():
                         msg += '\n'
                     print("Move :", state_move, "msg :", msg)
                     sv.send(msg.encode())
-                    time.sleep(3)
+                    time.sleep(1)
                 except:
                     sv.close()
                     reconect = True
@@ -190,26 +193,32 @@ def control_robot():
                 try:
                     if state_stop == True:
                         state_stop = False
-                        msg = "255100"+"o"+"\n"
+                        msg = "255255100"+"o"+"\n"
                         sv.send(msg.encode())
-                        time.sleep(1.5)
+                        time.sleep(0.5)
                 except:
                     sv.close()
                     state_stop = True
                     reconect = True
                 if idx == 2:
-                    angles = angles_current
+                    angles = angles_current[0]
                     angles[3] = 90
-                    # angles[1] -= 5
-                    # angles[2] += 5
+                    angles[0] += bias[0]
+                    angles[2] += bias[2]
+                    angles[1] += bias[1]
+
 
                 elif idx == 3:
-                    angles = angles_current
+                    angles = angles_current[0]
                     angles[3] = 5
-                    # angles[1] -= 5
-                    # angles[2] += 5
+                    angles[0] += bias[0]
+                    angles[2] += bias[2]
+                    angles[1] += bias[1]
+
                 else:
                     angles = start[idx]
+                    # angles[0] += bias[0]
+
 
                 print('Angle: ', idx, angles)
                 msg = ''
@@ -230,68 +239,27 @@ def control_robot():
                 except:
                     sv.close()
                     reconect = True
+            
                 if idx >= len(start):
                     flag_move = True
                     print(idx, "Stop")
                     idx = 0
-                    reconect = True
+                    # reconect = True
                     catch_com = True
-                    state_move
-                    sv.close()
+                    # state_move
+                    # sv.close()
                     time.sleep(2)
         # else:
 
             # print("Cam left connect: ", check_cam_left)
             # print("Cam connect: ", check_cam)
-
-def moves():
-    # PORT = 8090
-    # SERVER = socket.gethostbyname(socket.gethostname())
-    # ADDR = (SERVER, PORT)
-    # print(SERVER)
-    # server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # server.bind(ADDR)
-    # server.listen()
-
-
-    direct = [104,103,102,116]
-    reconect = True
-
-    while True:
-        # if reconect == True:
-        #     sv, addr = server.accept()
-        #     reconect = False
-        #     print('Got connection from', addr)
-        #     msg = "255100"+"o"+"\n"
-        #     sv.send(msg.encode())
-        if state_move != False:
-            if len(image_eye_rootl)!=0 and len(image_eye_rootr) != 0:
-                image1 = cv2.resize(image_eye_rootl, [255,255]).transpose([2,0,1])/255
-                image2 = cv2.resize(image_eye_rootr, [255,255]).transpose([2,0,1])/255
-                image1, image2 = torch.tensor([image1],dtype=torch.float32), torch.tensor([image2],dtype=torch.float32)
-                outputs = net(image1, image2)
-                _, predicted = torch.max(outputs, 1)
-                sig = np.array(predicted, dtype=np.uint8)[0]
-                print(direct[sig])
-            try:
-                dta = control_v(sv, direct[sig])
-                print("Direct: ",dta)
-                # send_msg = "255400"+str(direct[sig])+"\n"
-                # sv.send(send_msg.encode())
-                time.sleep(1)
-            except:
-                sv.close()
-                reconect = True
 if __name__ == '__main__':
     print("Started")
 
     # t = time.time()
     t1 = threading.Thread(target=eyes, args=(url1, url2,))
-    # t2 = threading.Thread(target=moves)
     t4 = threading.Thread(target=control_robot)
 
  
     t1.start()
-    # t2.start()
-    # t3.start()
     t4.start()

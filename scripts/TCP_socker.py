@@ -13,9 +13,9 @@ server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind(ADDR)
 server.listen()
 c, addr = server.accept()    
-angles = [120, #80-100
-          105, #35 - 60
-          10, #50-100
+angles = [0, #80-100
+          150, #35 - 60
+          0, #50-100
           0]
 count = 0
 while True:

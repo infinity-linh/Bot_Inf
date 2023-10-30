@@ -16,15 +16,13 @@ from numpy import random
 from model_CNN import Net
 
 
-url1 = 'http://192.168.2.103/cam-lo.jpg'
-url2 = 'http://192.168.2.102/cam-lo.jpg'
-# url1 = 'http://192.168.1.11/cam-lo.jpg'
-# url2 = 'http://192.168.1.9/cam-lo.jpg'
+# url1 = 'http://192.168.2.103/cam-lo.jpg'
+# url2 = 'http://192.168.2.102/cam-lo.jpg'
+url1 = 'http://192.168.1.7/cam-lo.jpg'
+url2 = 'http://192.168.1.9/cam-lo.jpg'
 
 
-
-PATH = "D:/User/Bot_C/Res/scripts/model/model_auto.pt"
-PATH_m = 'D:/User/DLBot/scripts/model/move_model_new_4.pt'
+PATH = 'D:/User/DLBot/scripts/model/move_model_new_256.pt'
 
 if torch.cuda.is_available():
     device = "cuda:0"
@@ -32,10 +30,9 @@ else:
     device = "cpu"
 
 detect = Detection()
-model_ctr = ANN(8)
-model_ctr.load_state_dict(torch.load(PATH))
+
 net = Net()
-net.load_state_dict(torch.load(PATH_m, map_location=torch.device(device)))
+net.load_state_dict(torch.load(PATH, map_location=torch.device(device)))
 
 boxes_one = []
 boxes_two = []
@@ -156,9 +153,14 @@ def auto_robot_v2():
 
                 if auto_run == True:
                     msg = ''
-                    angles_base = random.randint(80, 120)
-                    angles_show = random.randint(20, 60)
-                    angles_elbo = random.randint(50, 80)
+                    xx = random.randint(7, 18)
+                    yy = random.randint(-7, 4)
+                    zz = random.randint(2, 5)
+                    print(xx, yy, zz)
+                    angles_base, angles_show, angles_elbo = donghocnguoc(xx, yy, zz)  
+                    # angles_base = random.randint(80, 120)
+                    # angles_show = random.randint(20, 60)
+                    # angles_elbo = random.randint(50, 80)
                     angles_grip = random.randint(15, 20)
 
                     angles = [angles_base, angles_show, angles_elbo, angles_grip]
@@ -213,15 +215,16 @@ def create_data():
     server.bind(ADDR)
     server.listen()
     reconect = True
-    path_csv = "D:/User/DLBot/scripts/data/locals.csv"
+    path_csv = "D:/User/data_map/locals.csv"
     direct = [104,103,102,116]
-    path_save_l = "D:/User/data_map_1/left/"
-    path_save_r = "D:/User/data_map_1/right/"
+    path_save_l = "D:/User/data_map/left/"
+    path_save_r = "D:/User/data_map/right/"
     idx_name = len(os.listdir(path_save_l))
     print(idx_name)
     # cv2.namedWindow("Eye:", cv2.WINDOW_NORMAL)
     numofimage = 0
     auto = False
+    # state_study = False
     while True:
         if reconect == True:
             frame = cv2.imread("D:/User/firmware/Screen/hinh-anh-mat-cuoi2-1.png")
@@ -239,6 +242,8 @@ def create_data():
                 if key == 32:
                     auto = ~auto
                     print("Auto: ", auto)
+                # elif key == 27:
+                #     study = ~state_study
                 # if auto!=True:f
                 else:
                 # if key!=32:
@@ -280,15 +285,19 @@ def create_data():
                         reconect = True
             if auto == -1: 
                 if len(image_eye_rootl)!=0 and len(image_eye_rootr) != 0:
-                    image1 = cv2.resize(image_eye_rootl, [256,256]).transpose([2,0,1])
-                    image2 = cv2.resize(image_eye_rootr, [256,256]).transpose([2,0,1])
-                    image1, image2 = torch.tensor([image1],dtype=torch.float32), torch.tensor([image2],dtype=torch.float32)
-                    outputs = net(image1, image2)
+                    image1 = cv2.resize(image_eye_rootl, [128,256])
+                    image2 = cv2.resize(image_eye_rootr, [128,256])
+                    image = cv2.hconcat([image1, image2]).transpose([2,0,1])
+                    # image1, image2 = torch.tensor(np.array([image1]),dtype=torch.float32), 
+                    image = torch.tensor(np.array([image]),dtype=torch.float32)
+                    outputs = net(image)
                     _, predicted = torch.max(outputs, 1)
                     sig = np.array(predicted, dtype=np.uint8)[0]
                     print(direct[sig])
                     dta, send_msg, _ = control_v(sv, direct[sig])
                     print("Direct: ",dta)
+                    # if state_study == -1:
+
                 try:
                     print(send_msg)
                     sv.send(send_msg.encode())
@@ -319,17 +328,58 @@ def colection_data():
             except:
                 pass
 
+def test_arm ():
+    global ag
+    PORT = 8090
+    reconect = True
+
+    SERVER = socket.gethostbyname(socket.gethostname())
+    ADDR = (SERVER, PORT)
+    print(SERVER)
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind(ADDR)
+    server.listen()
+    model_ctr = ANN(8)
+    msg = ''
+    model_ctr.load_state_dict(torch.load("D:/User/DLBot/scripts/model/model_auto_arm.pt"))
+    while True:
+        if reconect == True:
+            sv, addr = server.accept()
+            reconect = False
+        if len(boxes_one) != 0 and len(boxes_two) != 0:
+
+            boxes = np.array([
+                    np.hstack([boxes_one[0], boxes_two[0]])/400], dtype=np.float32)
+        
+            angles = model_ctr(torch.tensor(
+            boxes, dtype=torch.float32))
+            angles = np.array(angles.detach().numpy()*180/np.pi, dtype=np.int8)[0]
+
+            print(angles)
+            try:
+                for i in angles:
+                    msg += '0'*(3-len(str(i))) + str(i)
+                msg += '\n'
+                # if state_stop == False:
+                print(msg)
+                sv.send(msg.encode())
+                time.sleep(1)
+            except: 
+                reconect = False
+                time.sleep(1)
+                pass
 if __name__ == '__main__':
     print("Started")
 
     # t = time.time()
     t1 = threading.Thread(target=eyes, args=(url1, url2,))
-    t2 = threading.Thread(target=create_data)
-    # t3 = threading.Thread(target=auto_robot_v2)
-    # t3 = threading.Thread(target=colection_data)
+    # t2 = threading.Thread(target=create_data)
+    t2 = threading.Thread(target=auto_robot_v2)
+    # t2 = threading.Thread(target=colection_data)
+    # t2 = threading.Thread(target=test_arm)
+
 
 
     t1.start()
     t2.start()
-    # t3.start()
 

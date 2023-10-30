@@ -28,26 +28,26 @@ class Net(nn.Module):
         self.fc3 = nn.Linear(in_features=128, out_features=4)
         self.out = nn.Sigmoid()
         
-    def forward(self, x, y):
+    def forward(self, x):
         out1 = self.layer1(x)
-        out2 = self.layer1(y)
+        # out2 = self.layer1(y)
 
         out1 = self.layer2(out1)
-        out2 = self.layer2(out2)
+        # out2 = self.layer2(out2)
 
         out1 = out1.view(out1.size(0), -1)
-        out2 = out2.view(out2.size(0), -1)
+        # out2 = out2.view(out2.size(0), -1)
 
         out1 = self.fc1(out1)
-        out2 = self.fc1(out2)
+        # out2 = self.fc1(out2)
 
-        out1 = self.drop(out1)
-        out2 = self.drop(out2)
+        # out1 = self.drop(out1)
+        # out2 = self.drop(out2)
         
         out1 = self.fc2(out1)
-        out2 = self.fc2(out2)
-        out = out1 + out2
-        out = self.fc3(out)
+        # out2 = self.fc2(out2)
+        # out = out1 + out2
+        out = self.fc3(out1)
         # out2 = self.fc3(out2)
         
         return out

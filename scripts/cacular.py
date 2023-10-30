@@ -3,7 +3,9 @@
 import torch
 import numpy as np
 state_one = [106, 169, 58, 10]
-
+L0 = 7.5
+L1 = 8
+L2 = 11.5
 
 def control_keyboard(port, key):
     msg = {32: "o",
@@ -38,8 +40,8 @@ def control_v(port, key):
            116: '900',
            102: '150',
            104: '150',
-           103: '400'}
-    send_msg = "240"+"225"+speed[key]+str(msg[key])+"\n"
+           103: '700'}
+    send_msg = "200"+"200"+speed[key]+str(msg[key])+"\n"
     # print(send_msg)
     # port.send(send_msg.encode())
     return str(msg[key]), send_msg, int(speed[key])/1000
@@ -110,7 +112,8 @@ def calculator(data_input):
 
 def center_box(box):
     x, y = box[0]+(box[2] - box[0])//2, box[1]+(box[3] - box[1])//2
-    return x, y
+    w, h = (box[2] - box[0]), (box[3] - box[1])
+    return x, y, w, h
 
 
 def square_box(box):
@@ -132,10 +135,10 @@ def cacular_speed(areas):
         return '200200'+v
         # return '230230'
     else:
-        different = 15000 - areas
+        different = 20000 - areas
         print("Diff: ", different)
         if different > 0:
-            speed = convert_map(different, 15000, 0, 400, 20)
+            speed = convert_map(different, 20000, 0, 400, 20)
             # print(speed)
             v = '0'*(3-len(str(int(speed)))) + str(int(speed))
             return '200200'+v
@@ -151,18 +154,21 @@ def state_robot(boxes_one, boxes_two, model_ctr, flag_move, state_stop, catch_co
         # print(boxes_one, boxes_two)
         area_one, area_two = square_box(
             boxes_one[0]), square_box(boxes_two[0])
-        cox, coy = center_box(boxes_one[0])
-        ctx, cty = center_box(boxes_two[0])
+        cox, coy, wox, hox = center_box(boxes_one[0])
+        ctx, cty, wtx, htx = center_box(boxes_two[0])
         # print(area_one, area_two)
-        if 15000 < area_one < 30000 or 15000 < area_two < 30000:
+        if 20000 < area_one < 30000 or 20000 < area_two < 30000:
             if abs(cox - 200) < 120 and 0 < ctx - 200 < 150:
                 # boxes = np.array([np.hstack([center_box(boxes_one[0]), center_box(boxes_two[0])])/400],dtype=np.float32)
+                # boxes = np.array([
+                #     np.hstack([cox, coy, wox, hox, ctx, cty, wtx, htx])/400], dtype=np.float32)
                 boxes = np.array([
-                    np.hstack([boxes_two[0], boxes_one[0]])/400], dtype=np.float32)
-
+                    np.hstack([boxes_one[0], boxes_two[0]])/400], dtype=np.float32)
+                
                 angles = model_ctr(torch.tensor(
-                    boxes, dtype=torch.float32))*180
-                angles = np.array(angles.detach().numpy(), dtype=np.int8)
+                    boxes, dtype=torch.float32))
+                angles = np.array(angles.detach().numpy()*180/np.pi, dtype=np.int8)
+                print(angles_current)
                 angles_current = angles
                 flag_move = False
                 state_stop = True
@@ -175,7 +181,7 @@ def state_robot(boxes_one, boxes_two, model_ctr, flag_move, state_stop, catch_co
     if (len(boxes_one) != 0):
         state_move = False
         area_one = square_box(boxes_one[0])
-        cox, coy = center_box(boxes_one[0])
+        cox, coy, _, _ = center_box(boxes_one[0])
 
         if abs(cox - 200) > 100:
             speed = cacular_speed(cox)
@@ -196,7 +202,7 @@ def state_robot(boxes_one, boxes_two, model_ctr, flag_move, state_stop, catch_co
     elif (len(boxes_two) != 0):
         state_move = False
         area_two = square_box(boxes_two[0])
-        ctx, cty = center_box(boxes_two[0])
+        ctx, cty, _, _ = center_box(boxes_two[0])
 
         if abs(ctx - 200) > 100:
             speed = cacular_speed(ctx)
@@ -224,3 +230,28 @@ def state_robot(boxes_one, boxes_two, model_ctr, flag_move, state_stop, catch_co
         state_move = True
 
     return msg, flag_move, state_stop, catch_com, angles_current, state_move, idx
+
+def donghocnguoc(x, y, z):
+    a_1 = np.arctan(y/x)
+
+    n = z-L0
+    m = x*np.cos(a_1) + y*np.sin(a_1)
+
+    a_3 = np.arccos((m**2 + n**2 - L1**2 - L2**2)/(2*L1*L2))
+
+    u = L1 + L2*np.cos(a_3)
+    v = L2 * np.sin(a_3)
+
+    a_2 = np.arccos((u*m-v*n)/(u**2 + v**2))
+
+    a_r0 = np.pi/2 - a_1
+    a_r1 = a_2 
+    a_r2 = a_3 - a_2
+
+    return int(a_r0*180/np.pi), int(a_r1*180/np.pi), int(a_r2*180/np.pi)
+
+def donghocthuan(q1, q2, q3, q4):
+    x = L1*np.cos(q2)*np.cos(q1) + L2*np.cos(q3-q2)*np.cos(q1)
+    y = L1*np.cos(q2)*np.sin(q1) + L2*np.cos(q3-q2)*np.sin(q1)
+    z = L1*np.sin(q2) - L2*np.sin(q3-q2) + L0
+    return x, y, z, q4

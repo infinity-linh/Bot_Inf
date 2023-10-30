@@ -20,12 +20,12 @@ server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind(ADDR)
 server.listen()
 
-url1 = 'http://192.168.2.103/cam-lo.jpg'
-url2 = 'http://192.168.2.102/cam-lo.jpg'
-# url1 = 'http://192.168.1.11/cam-lo.jpg'
-# url2 = 'http://192.168.1.9/cam-lo.jpg'
-PATH = "D:/User/DLBot/scripts/model/model_auto.pt"
-PATH_m = 'D:/User/DLBot/scripts/model/move_model_new_3.pt'
+# url1 = 'http://192.168.2.103/cam-lo.jpg'
+# url2 = 'http://192.168.2.102/cam-lo.jpg'
+url1 = 'http://192.168.1.7/cam-lo.jpg'
+url2 = 'http://192.168.1.9/cam-lo.jpg'
+PATH = "D:/User/DLBot/scripts/model/model_auto_arm.pt"
+PATH_m = 'D:/User/DLBot/scripts/model/move_model_new_256.pt'
 
 if torch.cuda.is_available():
     device = "cuda:0"
@@ -107,15 +107,15 @@ def eyes(url1, url2):
 
 
 def control_robot():
-    bias = [40, -5, -5]
-    start = [[120, 150, 30, 5],
-             [120, 150, 30, 90],
-             [120, 150, 30, 90],
-             [120, 150, 30, 90],
-             [120, 100, 10, 5],
-             [15, 125, 10, 5],
-             [15, 125, 10, 90],
-             [120, 150, 30, 5]]
+    bias = [40, 10, -5]
+    start = [[100, 150, 30, 5],
+             [100, 150, 30, 90],
+             [100, 150, 30, 90],
+             [100, 150, 30, 90],
+             [100, 100, 10, 5],
+             [5, 125, 10, 5],
+             [5, 125, 10, 90],
+             [100, 150, 30, 5]]
             #  [106, 150, 30, 50],
             #  [106, 150, 30, 5]]
     global state_move
@@ -128,7 +128,7 @@ def control_robot():
     catch_com = False
     direct = [104,103,102,116]
     idx = 0
-    print(len(start))
+    # print(len(start))
     while True:
         angles = []
  
@@ -155,10 +155,12 @@ def control_robot():
             #     state_move = False
             if state_move != False:
                 if len(image_eye_rootl)!=0 and len(image_eye_rootr) != 0:
-                    image1 = cv2.resize(image_eye_rootl, [256,256]).transpose([2,0,1])
-                    image2 = cv2.resize(image_eye_rootr, [256,256]).transpose([2,0,1])
-                    image1, image2 = torch.tensor(np.array([image1]),dtype=torch.float32), torch.tensor(np.array([image2]),dtype=torch.float32)
-                    outputs = net(image1, image2)
+                    image1 = cv2.resize(image_eye_rootl, [128,256])
+                    image2 = cv2.resize(image_eye_rootr, [128,256])
+                    image = cv2.hconcat([image1, image2]).transpose([2,0,1])
+                    # image1, image2 = torch.tensor(np.array([image1]),dtype=torch.float32), 
+                    image = torch.tensor(np.array([image]),dtype=torch.float32)
+                    outputs = net(image)
                     _, predicted = torch.max(outputs, 1)
                     sig = np.array(predicted, dtype=np.uint8)[0]
                     # print(direct[sig])
@@ -203,18 +205,15 @@ def control_robot():
                 if idx == 2:
                     angles = angles_current[0]
                     angles[3] = 90
-                    angles[0] += bias[0]
-                    angles[2] += bias[2]
-                    angles[1] += bias[1]
-
-
+                    angles[0] += 5
+                    angles[2] += 10
+                    angles[1] += 5
                 elif idx == 3:
                     angles = angles_current[0]
                     angles[3] = 5
-                    angles[0] += bias[0]
-                    angles[2] += bias[2]
-                    angles[1] += bias[1]
-
+                    angles[0] += 5
+                    angles[2] += 10
+                    angles[1] += 5
                 else:
                     angles = start[idx]
                     # angles[0] += bias[0]

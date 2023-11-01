@@ -18,11 +18,11 @@ from model_CNN import Net
 
 # url1 = 'http://192.168.2.103/cam-lo.jpg'
 # url2 = 'http://192.168.2.102/cam-lo.jpg'
-url1 = 'http://192.168.1.7/cam-lo.jpg'
-url2 = 'http://192.168.1.9/cam-lo.jpg'
+url1 = 'http://192.168.1.9/cam-lo.jpg'
+url2 = 'http://192.168.1.7/cam-lo.jpg'
 
 
-PATH = 'D:/User/DLBot/scripts/model/move_model_new_256.pt'
+PATH = 'D:/User/DLBot/scripts/model/move_model_new_256v2.pt'
 
 if torch.cuda.is_available():
     device = "cuda:0"
@@ -33,7 +33,9 @@ detect = Detection()
 
 net = Net()
 net.load_state_dict(torch.load(PATH, map_location=torch.device(device)))
-
+model_ctr = ANN(8)
+model_ctr.load_state_dict(torch.load("D:/User/DLBot/scripts/model/model_auto_arm_pro.pt"))
+    
 boxes_one = []
 boxes_two = []
 ag = True
@@ -153,11 +155,11 @@ def auto_robot_v2():
 
                 if auto_run == True:
                     msg = ''
-                    xx = random.randint(7, 18)
-                    yy = random.randint(-7, 4)
+                    xx = random.randint(5, 18)
+                    yy = random.randint(-4, 4)
                     zz = random.randint(2, 5)
                     print(xx, yy, zz)
-                    angles_base, angles_show, angles_elbo = donghocnguoc(xx, yy, zz)  
+                    angles_base, angles_show, angles_elbo, _ = donghocnguoc(xx, yy, zz, 10)  
                     # angles_base = random.randint(80, 120)
                     # angles_show = random.randint(20, 60)
                     # angles_elbo = random.randint(50, 80)
@@ -339,22 +341,28 @@ def test_arm ():
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind(ADDR)
     server.listen()
-    model_ctr = ANN(8)
     msg = ''
-    model_ctr.load_state_dict(torch.load("D:/User/DLBot/scripts/model/model_auto_arm.pt"))
+    bias = [0,-5,2]
     while True:
         if reconect == True:
             sv, addr = server.accept()
             reconect = False
+            msg = "100150030090\n"
+            sv.send(msg.encode())
+
         if len(boxes_one) != 0 and len(boxes_two) != 0:
 
             boxes = np.array([
-                    np.hstack([boxes_one[0], boxes_two[0]])/400], dtype=np.float32)
+                    np.hstack([center_box(boxes_one[0]), center_box(boxes_two[0])])/400], dtype=np.float32)
         
             angles = model_ctr(torch.tensor(
             boxes, dtype=torch.float32))
-            angles = np.array(angles.detach().numpy()*180/np.pi, dtype=np.int8)[0]
-
+            local = np.array(angles.detach().numpy(), dtype=np.int8)[0]
+            angles = donghocnguoc(local[0], local[1], local[2], local[3])
+            angles[0] += bias[0]
+            angles[1] += bias[1]
+            angles[2] += bias[2]
+            angles[3] = 5
             print(angles)
             try:
                 for i in angles:
@@ -363,18 +371,19 @@ def test_arm ():
                 # if state_stop == False:
                 print(msg)
                 sv.send(msg.encode())
-                time.sleep(1)
+                time.sleep(3)
             except: 
-                reconect = False
-                time.sleep(1)
-                pass
+                reconect = True
+                sv.close()
+                # time.sleep(1)
+
 if __name__ == '__main__':
     print("Started")
 
     # t = time.time()
     t1 = threading.Thread(target=eyes, args=(url1, url2,))
-    # t2 = threading.Thread(target=create_data)
-    t2 = threading.Thread(target=auto_robot_v2)
+    t2 = threading.Thread(target=create_data)
+    # t2 = threading.Thread(target=auto_robot_v2)
     # t2 = threading.Thread(target=colection_data)
     # t2 = threading.Thread(target=test_arm)
 

@@ -22,10 +22,10 @@ server.listen()
 
 # url1 = 'http://192.168.2.103/cam-lo.jpg'
 # url2 = 'http://192.168.2.102/cam-lo.jpg'
-url1 = 'http://192.168.1.7/cam-lo.jpg'
-url2 = 'http://192.168.1.9/cam-lo.jpg'
+url1 = 'http://192.168.1.9/cam-lo.jpg'
+url2 = 'http://192.168.1.7/cam-lo.jpg'
 PATH = "D:/User/DLBot/scripts/model/model_auto_arm.pt"
-PATH_m = 'D:/User/DLBot/scripts/model/move_model_new_256.pt'
+PATH_m = 'D:/User/DLBot/scripts/model/move_model_new_256v2.pt'
 
 if torch.cuda.is_available():
     device = "cuda:0"
@@ -65,8 +65,8 @@ def eyes(url1, url2):
     print("Camera ready!")
     while True:
         try:
-            img_resp1 = urllib.request.urlopen(url1, timeout=2)
-            img_resp2 = urllib.request.urlopen(url2, timeout=2)
+            img_resp1 = urllib.request.urlopen(url1, timeout=1)
+            img_resp2 = urllib.request.urlopen(url2, timeout=1)
 
             imgnp1 = np.array(bytearray(img_resp1.read()), dtype=np.uint8)
             imgnp2 = np.array(bytearray(img_resp2.read()), dtype=np.uint8)
@@ -108,14 +108,14 @@ def eyes(url1, url2):
 
 def control_robot():
     bias = [40, 10, -5]
-    start = [[100, 150, 30, 5],
-             [100, 150, 30, 90],
-             [100, 150, 30, 90],
-             [100, 150, 30, 90],
-             [100, 100, 10, 5],
-             [5, 125, 10, 5],
+    start = [[100, 150, 30, 10],
+             [100, 150, 30, 100],
+             [100, 150, 30, 100],
+             [100, 150, 30, 100],
+             [100, 100, 10, 10],
+             [5, 125, 10, 10],
              [5, 125, 10, 90],
-             [100, 150, 30, 5]]
+             [100, 150, 30, 10]]
             #  [106, 150, 30, 50],
             #  [106, 150, 30, 5]]
     global state_move
@@ -132,7 +132,7 @@ def control_robot():
     while True:
         angles = []
  
-        # catch_com = False
+        catch_com = False
 
         # state_stop = False
         if reconect == True:
@@ -204,16 +204,16 @@ def control_robot():
                     reconect = True
                 if idx == 2:
                     angles = angles_current[0]
-                    angles[3] = 90
-                    angles[0] += 5
-                    angles[2] += 10
-                    angles[1] += 5
+                    angles[3] = 120
+                    angles[0] -= 1
+                    angles[2] += 6
+                    # angles[1] -= 5
                 elif idx == 3:
                     angles = angles_current[0]
-                    angles[3] = 5
-                    angles[0] += 5
-                    angles[2] += 10
-                    angles[1] += 5
+                    angles[3] = 10
+                    angles[0] -= 1
+                    angles[2] += 6
+                    # angles[1] -= 5
                 else:
                     angles = start[idx]
                     # angles[0] += bias[0]

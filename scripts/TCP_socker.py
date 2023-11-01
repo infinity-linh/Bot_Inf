@@ -16,7 +16,7 @@ c, addr = server.accept()
 angles = [0, #80-100
           150, #35 - 60
           0, #50-100
-          0]
+          10]
 count = 0
 while True:
     # data

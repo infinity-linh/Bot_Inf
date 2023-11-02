@@ -7,7 +7,8 @@ class ANN(nn.Module):
 
         # self.relu1 = nn.ReLU(inplace=True)
         self.liner1 = nn.Linear(input,128)
-        # self.relu = nn.ReLU()
+        # self.relu = nn.LeakyReLU()
+        
         self.relu = nn.Tanh()
         self.liner2 = nn.Linear(128,64)
         self.drop = nn.Dropout2d(0.25)
@@ -18,7 +19,7 @@ class ANN(nn.Module):
     def forward(self, x):
         out = self.relu(self.liner1(x))
         out = self.relu(self.liner2(out))
-        out = self.drop(out)
+        # out = self.drop(out)
         # out = self.relu(self.liner3(out))
         out = self.liner3(out)
 

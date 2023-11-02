@@ -6,14 +6,14 @@ int dutyCycle = 255;
 
 #define led 2
 
-// const char *ssid = "101";
-// const char *password = "p1016282";
+const char *ssid = "101";
+const char *password = "p1016282";
 
-const char *ssid = "DO VAN LUC";
-const char *password = "0867660302";
+// const char *ssid = "DO VAN LUC";
+// const char *password = "0867660302";
 const uint16_t port = 8090;
-// const char *host = "192.168.2.107";
-const char *host = "192.168.1.6";
+const char *host = "192.168.2.107";
+// const char *host = "192.168.1.6";
 
 
 

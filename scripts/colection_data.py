@@ -16,10 +16,10 @@ from numpy import random
 from model_CNN import Net
 
 
-# url1 = 'http://192.168.2.103/cam-lo.jpg'
-# url2 = 'http://192.168.2.102/cam-lo.jpg'
-url1 = 'http://192.168.1.9/cam-lo.jpg'
-url2 = 'http://192.168.1.7/cam-lo.jpg'
+url1 = 'http://192.168.2.103/cam-lo.jpg'
+url2 = 'http://192.168.2.102/cam-lo.jpg'
+# url1 = 'http://192.168.1.9/cam-lo.jpg'
+# url2 = 'http://192.168.1.7/cam-lo.jpg'
 
 
 PATH = 'D:/User/DLBot/scripts/model/move_model_new_256v2.pt'
@@ -51,6 +51,20 @@ def change_brightness(img, alpha, beta):
     img_new[img_new < 0] = 0
     return np.array(img_new, dtype=np.uint8)
 
+def draw_number(boxes1, boxes2, image1, image2):
+    x_1, y_1, w_1, h_1 = center_box(boxes1[0])
+    x_2, y_2, w_2, h_2 = center_box(boxes2[0])
+
+    cv2.circle(image1, (x_1, y_1), 1, (255,0,0), 1,1)
+    cv2.circle(image2, (x_2, y_2), 1, (255,0,0), 1,1)
+
+    cv2.putText(image1, "W :{}, H: {}".format(str(w_1), str(h_1)), (10,20), cv2.FONT_HERSHEY_PLAIN, 1, (0,0,255),0, cv2.LINE_AA)
+    cv2.putText(image2, "W :{}, H: {}".format(str(w_2), str(h_2)), (10,20), cv2.FONT_HERSHEY_PLAIN, 1, (0,0,255),1, cv2.LINE_AA)
+
+    cv2.putText(image1, "({}, {})".format(str(x_1), str(y_1)), (x_1, y_1), cv2.FONT_HERSHEY_PLAIN, 1, (0,0,255),0, cv2.LINE_AA)
+    cv2.putText(image2, "({}, {})".format(str(x_2), str(y_2)), (x_2, y_2), cv2.FONT_HERSHEY_PLAIN, 1, (0,0,255),1, cv2.LINE_AA)
+
+
 
 def eyes(url1, url2):
     global boxes_two
@@ -64,8 +78,10 @@ def eyes(url1, url2):
     count = 0
     while True:
         if check_cam == False:
-            cv2.namedWindow('Camera l:', cv2.WINDOW_NORMAL)
-            cv2.namedWindow('Camera r:', cv2.WINDOW_NORMAL)
+            cv2.namedWindow('Camera eyes:')
+
+            # cv2.namedWindow('Camera l:', cv2.WINDOW_NORMAL)
+            # cv2.namedWindow('Camera r:', cv2.WINDOW_NORMAL)
 
         try:
             img_resp1 = urllib.request.urlopen(url1, timeout=2)
@@ -98,9 +114,12 @@ def eyes(url1, url2):
                 boxes_one = boxes1
                 boxes_two = boxes2
             check_cam = True
+            draw_number(boxes1, boxes2, image_eye_left, image_eye_right)
+            image_eyes = cv2.hconcat([image_eye_left, image_eye_right])
+            cv2.imshow("Camera eyes:", image_eyes)
 
-            cv2.imshow("Camera l:", image_eye_left)
-            cv2.imshow("Camera r:", image_eye_right)
+            # cv2.imshow("Camera l:", image_eye_left)
+            # cv2.imshow("Camera r:", image_eye_right)
 
 
             key = cv2.waitKey(1)
@@ -111,9 +130,9 @@ def eyes(url1, url2):
 
 
         except:
-            # cv2.destroyAllWindows()
-            cv2.destroyWindow('Camera l:')
-            cv2.destroyWindow('Camera r:')
+            cv2.destroyAllWindows()
+            # cv2.destroyWindow('Camera l:')
+            # cv2.destroyWindow('Camera r:')
 
             check_cam = False
 
@@ -342,7 +361,7 @@ def test_arm ():
     server.bind(ADDR)
     server.listen()
     msg = ''
-    bias = [0,-5,2]
+    bias = [-8, 10, 0]
     while True:
         if reconect == True:
             sv, addr = server.accept()
@@ -358,11 +377,14 @@ def test_arm ():
             angles = model_ctr(torch.tensor(
             boxes, dtype=torch.float32))
             local = np.array(angles.detach().numpy(), dtype=np.int8)[0]
+            local = local/10
             angles = donghocnguoc(local[0], local[1], local[2], local[3])
-            angles[0] += bias[0]
-            angles[1] += bias[1]
-            angles[2] += bias[2]
-            angles[3] = 5
+            # print(donghocnguoc(local[0], local[1], local[2], local[3]))
+
+            angles[0] += 8
+            # angles[1] += 3
+            # angles[2] += 8
+            angles[3] = 120
             print(angles)
             try:
                 for i in angles:
@@ -371,21 +393,22 @@ def test_arm ():
                 # if state_stop == False:
                 print(msg)
                 sv.send(msg.encode())
-                time.sleep(3)
+                time.sleep(200)
             except: 
                 reconect = True
                 sv.close()
-                # time.sleep(1)
+                time.sleep(1)
+            # break
 
 if __name__ == '__main__':
     print("Started")
 
     # t = time.time()
     t1 = threading.Thread(target=eyes, args=(url1, url2,))
-    t2 = threading.Thread(target=create_data)
+    # t2 = threading.Thread(target=create_data)
     # t2 = threading.Thread(target=auto_robot_v2)
     # t2 = threading.Thread(target=colection_data)
-    # t2 = threading.Thread(target=test_arm)
+    t2 = threading.Thread(target=test_arm)
 
 
 
